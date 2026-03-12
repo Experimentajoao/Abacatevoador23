@@ -2,20 +2,21 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Teste do Cadeado</title>
+    <title>Raio-X do Banco de Dados</title>
 </head>
-<body style="padding: 50px; font-family: Arial;">
+<body style="padding: 40px; font-family: sans-serif;">
 
-    <h1>Laboratório de Teste</h1>
-    <button id="btn-entrar" style="padding: 15px; font-size: 16px; cursor: pointer;">Testar Login do Google</button>
-    <h2 id="resultado" style="color: blue; margin-top: 20px;">Esperando você clicar...</h2>
+    <h2>Raio-X do Sistema</h2>
+    <p>Vamos ver o que o computador está enxergando de verdade.</p>
+    <button id="btn-entrar" style="padding: 15px; background: #000; color: #fff; cursor: pointer; border-radius: 5px;">🔍 Fazer Raio-X</button>
+    
+    <pre id="resultado" style="background: #eee; padding: 20px; margin-top: 20px; border-radius: 8px; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; font-weight: bold;">Aguardando clique...</pre>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // Sua chave purinha, sem alterações
         const firebaseConfig = {
             apiKey: "AIzaSyDKS7qoxoM3z67ScthfO-jKsn4Knq33xb4",
             authDomain: "damas-no-plano.firebaseapp.com",
@@ -34,24 +35,43 @@
             painel.innerText = "Pensando...";
             
             try {
-                // 1. Tenta fazer o login
                 const credencial = await signInWithPopup(auth, new GoogleAuthProvider());
-                const email = credencial.user.email.toLowerCase();
-                painel.innerText = `Login feito com: ${email}. Procurando na Lista VIP...`;
-
-                // 2. Tenta ler o banco de dados
-                const docSnap = await getDoc(doc(db, "usuarios", email));
+                const emailLogado = credencial.user.email.toLowerCase();
                 
-                if (docSnap.exists()) {
-                    painel.innerText = "✅ SUCESSO ABSOLUTO! O banco de dados te achou e você é VIP.";
-                    painel.style.color = "green";
+                let log = `✅ 1. Login com o Google funcionou.\n`;
+                log += `📧 O Google diz que o e-mail que logou é: [${emailLogado}]\n\n`;
+                
+                log += `⏳ 2. Indo no Firebase procurar a pasta 'usuarios'...\n`;
+                painel.innerText = log;
+
+                const pastaUsuarios = await getDocs(collection(db, "usuarios"));
+                
+                if (pastaUsuarios.empty) {
+                    log += `❌ ERRO BIZARRO: O código achou a pasta 'usuarios' VAZIA ou não achou a pasta!\n`;
+                    log += `(Confira se a coleção no Firebase não foi criada com um espaço invisível no nome, ex: 'usuarios ')`;
                 } else {
-                    painel.innerText = "❌ BARRADO! Você logou, mas não achou esse e-mail na pasta 'usuarios'.";
-                    painel.style.color = "red";
+                    log += `📂 3. Sucesso! Encontrei estes e-mails dentro do seu banco de dados:\n`;
+                    let achou = false;
+                    
+                    pastaUsuarios.forEach((documento) => {
+                        const emailNoBanco = documento.id;
+                        log += `   -> [${emailNoBanco}]\n`;
+                        if (emailNoBanco === emailLogado) {
+                            achou = true;
+                        }
+                    });
+                    
+                    log += `\n`;
+                    if (achou) {
+                        log += `🎉 CONCLUSÃO: Tudo perfeito! O e-mail do Google bateu idêntico com o do banco. Se não estava abrindo antes, era só o cache (memória velha) do iPad atrapalhando.`;
+                    } else {
+                        log += `🚨 CONCLUSÃO: Os nomes NÃO BATEM. Veja os colchetes [ ] lá no passo 1 e no passo 3. Tem alguma letra ou espaço de diferença entre eles.`;
+                    }
                 }
+                painel.innerText = log;
+
             } catch (erro) {
                 painel.innerText = "⚠️ ERRO NO SISTEMA: " + erro.message;
-                painel.style.color = "red";
             }
         };
     </script>
