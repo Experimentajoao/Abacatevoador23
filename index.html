@@ -2,21 +2,315 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Raio-X do Banco de Dados</title>
-</head>
-<body style="padding: 40px; font-family: sans-serif;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damas no Plano Cartesiano</title>
+    <style>
+        /* ========================================= */
+        /* ESTILOS DA TELA DE LOGIN (CADEADO)        */
+        /* ========================================= */
+        #tela-login {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: white; padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; margin-top: 10vh;
+        }
+        .btn-google { 
+            background: #4285F4; color: white; border: none; padding: 15px 30px; 
+            border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.2s;
+        }
+        .btn-google:hover { background: #357ae8; }
+        #mensagem-erro { color: #dc3545; margin-top: 20px; display: none; font-weight: bold; background: #ffe6e6; padding: 10px; border-radius: 5px; }
+        
+        /* O jogo começa escondido */
+        #conteudo-do-jogo { 
+            display: none; /* Muda para flex quando logado */
+            flex-direction: column; align-items: center; width: 100%;
+        }
 
-    <h2>Raio-X do Sistema</h2>
-    <p>Vamos ver o que o computador está enxergando de verdade.</p>
-    <button id="btn-entrar" style="padding: 15px; background: #000; color: #fff; cursor: pointer; border-radius: 5px;">🔍 Fazer Raio-X</button>
-    
-    <pre id="resultado" style="background: #eee; padding: 20px; margin-top: 20px; border-radius: 8px; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; font-weight: bold;">Aguardando clique...</pre>
+        /* ========================================= */
+        /* ESTILOS ORIGINAIS DO SEU JOGO             */
+        /* ========================================= */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            background-color: #eef2f5; color: #333; margin: 0; padding: 20px; min-height: 100vh;
+        }
+        h1 { margin-bottom: 5px; color: #2c3e50; text-align: center; }
+        .sub-header { margin-bottom: 20px; color: #7f8c8d; font-size: 1.1em; text-align: center; }
+         
+        .game-container { display: flex; gap: 40px; align-items: flex-start; flex: 1; flex-wrap: wrap; justify-content: center; }
+        .board-wrapper { display: flex; flex-direction: column; }
+        .board-row { display: flex; }
+        .square { width: 65px; height: 65px; display: flex; justify-content: center; align-items: center; transition: opacity 0.2s, transform 0.1s; }
+        .dark { background-color: #a0522d; } 
+        .light { background-color: #f5deb3; }
+        
+        .square.clickable:hover { opacity: 0.7; cursor: crosshair; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.8); }
+         
+        .piece { width: 50px; height: 50px; border-radius: 50%; box-sizing: border-box; display: flex; justify-content: center; align-items: center; font-size: 26px; transition: all 0.3s; }
+        .red { background-color: #ff4757; border: 4px solid #b33939; }
+        .black { background-color: #2f3542; border: 4px solid #1e2229; }
+        
+        @keyframes piscar {
+            0% { box-shadow: 0 0 5px #f1c40f, 0 0 10px #f1c40f; transform: scale(1); }
+            50% { box-shadow: 0 0 20px #f1c40f, 0 0 30px #f1c40f; transform: scale(1.1); }
+            100% { box-shadow: 0 0 5px #f1c40f, 0 0 10px #f1c40f; transform: scale(1); }
+        }
+        .piece-highlight { animation: piscar 1.5s infinite; border-color: #f1c40f; z-index: 10; }
+         
+        .y-axis { display: flex; flex-direction: column; width: 35px; }
+        .y-label { height: 65px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: #57606f; }
+        .x-axis { display: flex; padding-left: 35px; height: 35px; }
+        .x-label { width: 65px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 22px; color: #57606f; }
+         
+        .panel { background-color: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; width: 340px; box-sizing: border-box; }
+        .current-turn { font-size: 32px; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 5px; font-weight: 900; border-bottom: 3px solid #eee; padding-bottom: 15px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .top-buttons { display: flex; gap: 10px; justify-content: space-between; }
+        .btn-small { padding: 10px; font-size: 14px; text-transform: uppercase; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; color: white; flex: 1; transition: background-color 0.2s, transform 0.1s; }
+        .btn-regras { background-color: #3498db; box-shadow: 0 3px 0 #2980b9; }
+        .btn-regras:hover { background-color: #2980b9; }
+        .btn-regras:active { transform: translateY(3px); box-shadow: 0 0 0 #2980b9; }
+        .btn-reiniciar { background-color: #f39c12; box-shadow: 0 3px 0 #d35400; }
+        .btn-reiniciar:hover { background-color: #d35400; }
+        .btn-reiniciar:active { transform: translateY(3px); box-shadow: 0 0 0 #d35400; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .input-label { font-weight: 700; color: #2c3e50; font-size: 1.1em; text-align: center;}
+        .input-row { display: flex; gap: 10px; align-items: center; justify-content: center; font-weight: bold;}
+        .coord-input { width: 60px; padding: 10px; font-size: 22px; font-weight: bold; text-align: center; border: 2px solid #ddd; border-radius: 6px; transition: border-color 0.2s; }
+        .coord-input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 8px rgba(52, 152, 219, 0.3); }
+        .btn-jogar { padding: 18px; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; background-color: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 900; transition: background-color 0.2s, transform 0.1s; box-shadow: 0 4px 0 #219653; width: 100%; box-sizing: border-box; }
+        .btn-jogar:hover { background-color: #2ecc71; }
+        .btn-jogar:active { transform: translateY(4px); box-shadow: 0 0 0 #219653; }
+        .btn-jogar:disabled { background-color: #95a5a6; box-shadow: 0 4px 0 #7f8c8d; cursor: not-allowed; }
+        .btn-atividade { background-color: #8e44ad; box-shadow: 0 4px 0 #732d91; margin-top: 10px; }
+        .btn-atividade:hover { background-color: #9b59b6; }
+        .btn-atividade:active { transform: translateY(4px); box-shadow: 0 0 0 #732d91; }
+        #message { font-weight: 900; min-height: 24px; text-align: center; margin-top: 10px; font-size: 1.2em; text-transform: uppercase; padding: 0; border-radius: 8px; transition: all 0.3s; opacity: 0; transform: scale(0.8); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
+        .modal-content { background: #fff; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: scale(0.8); transition: transform 0.3s; }
+        .modal-content h2 { color: #2c3e50; margin-top: 0; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px;}
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; font-weight: bold; color: #95a5a6; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: #e74c3c; }
+        footer { margin-top: 40px; padding: 20px 0; width: 100%; text-align: center; font-weight: 600; color: #7f8c8d; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <div id="tela-login">
+        <h1 style="color: #2c3e50; margin-bottom: 10px;">Damas no Plano</h1>
+        <p style="color: #7f8c8d; font-size: 1.1em;">Faça login para acessar o simulador.</p>
+        <button id="btn-entrar" class="btn-google">Entrar com o Google</button>
+        <p id="mensagem-erro">Acesso negado. E-mail não autorizado.</p>
+    </div>
+
+    <div id="conteudo-do-jogo">
+        <h1>Damas no Plano Cartesiano</h1>
+        <div class="sub-header" id="main-subtitle">Utilize as coordenadas (X, Y) para mover as peças.</div>
+     
+        <div class="game-container">
+            <div style="display: flex; flex-direction: column;">
+                <div style="display: flex;">
+                    <div class="y-axis" id="y-axis"></div>
+                    <div class="board-wrapper" id="board"></div>
+                </div>
+                <div class="x-axis" id="x-axis"></div>
+            </div>
+     
+            <div>
+                <div class="panel" id="panel-game">
+                    <div class="top-buttons">
+                        <button class="btn-small btn-regras" onclick="abrirModal('modal-regras')">📖 Regras</button>
+                        <button class="btn-small btn-reiniciar" onclick="reiniciarPartida()">🔄 Reiniciar</button>
+                    </div>
+         
+                    <div class="current-turn" id="turn-display">VEZ DAS <br><span style="color:#ff4757; font-size: 1.2em;">VERMELHAS</span></div>
+                     
+                    <div class="input-group">
+                        <div class="input-label">1. Origem da Peça</div>
+                        <div class="input-row">
+                            X: <input type="number" id="orig-x" class="coord-input" min="0" max="7">
+                            Y: <input type="number" id="orig-y" class="coord-input" min="0" max="7">
+                        </div>
+                    </div>
+         
+                    <div class="input-group">
+                        <div class="input-label">2. Destino</div>
+                        <div class="input-row">
+                            X: <input type="number" id="dest-x" class="coord-input" min="0" max="7">
+                            Y: <input type="number" id="dest-y" class="coord-input" min="0" max="7">
+                        </div>
+                    </div>
+         
+                    <button class="btn-jogar" onclick="fazerJogada()" id="btn-jogar">Enviar Jogada</button>
+                    
+                    <hr style="width: 100%; border: 1px solid #eee; margin: 10px 0;">
+                    <button class="btn-jogar btn-atividade" onclick="iniciarAtividade()">📝 Iniciar Atividade</button>
+                    
+                    <div id="message"></div>
+                </div>
+
+                <div class="panel" id="panel-exam" style="display: none; border: 3px solid #8e44ad;">
+                    <div class="current-turn" style="color: #8e44ad; font-size: 26px;">Modo Atividade</div>
+                    
+                    <div class="input-group" style="background: #fdf5ff; border-color: #e8daef;">
+                        <div class="input-label" id="exam-question-text" style="font-size: 1.3em; color: #8e44ad;">
+                            Exercício 1/10:<br>Qual a coordenada da peça em destaque?
+                        </div>
+                    </div>
+
+                    <div class="input-group" id="exam-input-area">
+                        <div class="input-label">Digite a Coordenada:</div>
+                        <div class="input-row">
+                            X: <input type="number" id="exam-x" class="coord-input" min="0" max="7">
+                            Y: <input type="number" id="exam-y" class="coord-input" min="0" max="7">
+                        </div>
+                    </div>
+
+                    <button class="btn-jogar" style="background-color: #8e44ad; box-shadow: 0 4px 0 #732d91;" onclick="responderAtividadeTipoA()" id="btn-responder-prova">Responder</button>
+                    <button class="btn-small btn-reiniciar" style="margin-top: 10px; width: 100%;" onclick="encerrarAtividade()">Sair da Atividade</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-regras" onclick="fecharModalFora(event, 'modal-regras')">
+            <div class="modal-content">
+                <span class="close-btn" onclick="fecharModal('modal-regras')">×</span>
+                <h2>📖 Regras do Jogo</h2>
+                <ul>
+                    <li><strong>Objetivo:</strong> Capturar todas as peças usando coordenadas.</li>
+                    <li><strong>Movimento:</strong> 1 casa na diagonal para frente.</li>
+                    <li><strong>Captura:</strong> Pule sobre a peça inimiga. Capturas em sequência são obrigatórias!</li>
+                    <li><strong>Damas (👑):</strong> Andam livremente nas diagonais (frente e trás).</li>
+                </ul>
+            </div>
+        </div>
+     
+        <footer>@experimentajoao | Soluções no Ensino de Matemática</footer>
+    </div>
+
+
+    <script>
+        let boardState = []; let currentPlayer = 1; let turnState = 'normal'; let activePiece = null; 
+        const isRed = (p) => p === 1 || p === 3; const isBlack = (p) => p === 2 || p === 4; const isDama = (p) => p === 3 || p === 4; const getPlayer = (p) => isRed(p) ? 1 : isBlack(p) ? 2 : 0;
+        let isActivityMode = false; let currentQuestionIdx = 0;
+        const examQuestions = [
+            { type: 'A', x: 2, y: 5, text: "Qual a coordenada (X, Y) da peça piscando no tabuleiro?" },
+            { type: 'B', x: 5, y: 3, text: "CLIQUE NO TABULEIRO na casa correspondente à coordenada (5, 3)." },
+            { type: 'A', x: 7, y: 0, text: "Localize a peça destacada e insira suas coordenadas abaixo." },
+            { type: 'B', x: 0, y: 6, text: "CLIQUE NO TABULEIRO na casa correspondente à coordenada (0, 6)." },
+            { type: 'A', x: 3, y: 4, text: "Qual a coordenada da peça piscando?" },
+            { type: 'B', x: 4, y: 1, text: "CLIQUE NO TABULEIRO na casa correspondente à coordenada (4, 1)." },
+            { type: 'A', x: 6, y: 7, text: "Onde está a peça? Insira X e Y." },
+            { type: 'B', x: 1, y: 2, text: "CLIQUE NO TABULEIRO na casa correspondente à coordenada (1, 2)." },
+            { type: 'A', x: 4, y: 5, text: "Localize a coordenada exata da peça." },
+            { type: 'B', x: 7, y: 4, text: "Para finalizar, CLIQUE na casa de coordenada (7, 4)." }
+        ];
+
+        function abrirModal(id) { const modal = document.getElementById(id); modal.style.display = 'flex'; setTimeout(() => { modal.style.opacity = '1'; const content = modal.querySelector('.modal-content') || modal.firstElementChild; if(content) content.style.transform = 'scale(1)'; }, 10); }
+        function fecharModal(id) { const modal = document.getElementById(id); modal.style.opacity = '0'; const content = modal.querySelector('.modal-content') || modal.firstElementChild; if(content) content.style.transform = 'scale(0.8)'; setTimeout(() => { modal.style.display = 'none'; }, 300); }
+        function fecharModalFora(event, id) { if (event.target === document.getElementById(id)) fecharModal(id); }
+        function mostrarMensagem(msg, isError = true, persistent = false) {
+            const msgDiv = isActivityMode ? document.createElement('div') : document.getElementById('message');
+            if(isActivityMode) { msgDiv.style.position = 'fixed'; msgDiv.style.top = '20px'; msgDiv.style.left = '50%'; msgDiv.style.transform = 'translateX(-50%)'; msgDiv.style.zIndex = '2000'; msgDiv.style.borderRadius = '8px'; document.body.appendChild(msgDiv); }
+            msgDiv.innerText = msg; msgDiv.style.opacity = '1'; if(!isActivityMode) msgDiv.style.transform = 'scale(1)'; msgDiv.style.padding = '15px 25px'; msgDiv.style.color = '#fff'; msgDiv.style.fontWeight = 'bold'; msgDiv.style.fontSize = '1.2em'; msgDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)'; msgDiv.style.backgroundColor = isError ? '#e74c3c' : '#2ecc71';
+            if (!persistent) { setTimeout(() => { msgDiv.style.opacity = '0'; if(!isActivityMode) msgDiv.style.transform = 'scale(0.8)'; if(isActivityMode) setTimeout(() => msgDiv.remove(), 300); }, isError ? 2500 : 1500); }
+        }
+
+        function iniciarAtividade() { isActivityMode = true; currentQuestionIdx = 0; currentPlayer = 1; document.getElementById('panel-game').style.display = 'none'; document.getElementById('panel-exam').style.display = 'flex'; document.getElementById('main-subtitle').innerText = "Modo Atividade: Pratique suas coordenadas!"; carregarQuestaoAtividade(); }
+        function carregarQuestaoAtividade() {
+            if (currentQuestionIdx >= examQuestions.length) { alert("🎉 Parabéns! Você concluiu todos os exercícios da atividade!"); encerrarAtividade(); return; }
+            const q = examQuestions[currentQuestionIdx]; document.getElementById('exam-question-text').innerHTML = `<strong>Exercício ${currentQuestionIdx + 1}/10:</strong><br>${q.text}`;
+            document.getElementById('exam-x').value = ''; document.getElementById('exam-y').value = '';
+            if (q.type === 'A') { document.getElementById('exam-input-area').style.display = 'flex'; document.getElementById('btn-responder-prova').style.display = 'block'; document.getElementById('exam-x').focus(); } 
+            else { document.getElementById('exam-input-area').style.display = 'none'; document.getElementById('btn-responder-prova').style.display = 'none'; }
+            drawBoard(); 
+        }
+        function responderAtividadeTipoA() {
+            const x = parseInt(document.getElementById('exam-x').value); const y = parseInt(document.getElementById('exam-y').value);
+            if (isNaN(x) || isNaN(y)) { alert("Preencha X e Y para responder."); return; }
+            const q = examQuestions[currentQuestionIdx];
+            if (x === q.x && y === q.y) { mostrarMensagem("✅ Correto! Muito bem.", false); currentQuestionIdx++; setTimeout(carregarQuestaoAtividade, 1500); } 
+            else { mostrarMensagem("❌ Incorreto! Tente novamente.", true); document.getElementById('exam-x').value = ''; document.getElementById('exam-y').value = ''; document.getElementById('exam-x').focus(); }
+        }
+        function activitySquareClick(x, y) {
+            if (!isActivityMode) return; const q = examQuestions[currentQuestionIdx]; if (q.type !== 'B') return;
+            if (x === q.x && y === q.y) { mostrarMensagem("✅ Correto! Você clicou no lugar exato.", false); currentQuestionIdx++; setTimeout(carregarQuestaoAtividade, 1500); } 
+            else { mostrarMensagem(`❌ Você clicou em (${x}, ${y}). Tente novamente!`, true); }
+        }
+        function encerrarAtividade() { isActivityMode = false; document.getElementById('panel-exam').style.display = 'none'; document.getElementById('panel-game').style.display = 'flex'; document.getElementById('main-subtitle').innerText = "Utilize as coordenadas (X, Y) para mover as peças."; reiniciarPartida(true); }
+        function initBoard() { boardState = []; for (let rowIdx = 0; rowIdx < 8; rowIdx++) { let row = []; let y = 7 - rowIdx; for (let x = 0; x <= 7; x++) { let isDarkSquare = (x + y) % 2 === 0; if (isDarkSquare && y <= 2) row.push(1); else if (isDarkSquare && y >= 5) row.push(2); else row.push(0); } boardState.push(row); } }
+        function drawBoard() {
+            const board = document.getElementById('board'); const yAxis = document.getElementById('y-axis'); const xAxis = document.getElementById('x-axis');
+            board.innerHTML = ''; yAxis.innerHTML = ''; xAxis.innerHTML = '';
+            let yStart = currentPlayer === 1 ? 7 : 0; let yEnd = currentPlayer === 1 ? -1 : 8; let yStep = currentPlayer === 1 ? -1 : 1;
+            let xStart = currentPlayer === 1 ? 0 : 7; let xEnd = currentPlayer === 1 ? 8 : -1; let xStep = currentPlayer === 1 ? 1 : -1;
+            for (let x = xStart; x !== xEnd; x += xStep) { let xLabel = document.createElement('div'); xLabel.className = 'x-label'; xLabel.innerText = x; xAxis.appendChild(xLabel); }
+            for (let yVal = yStart; yVal !== yEnd; yVal += yStep) {
+                let rowIdx = 7 - yVal; let yLabel = document.createElement('div'); yLabel.className = 'y-label'; yLabel.innerText = yVal; yAxis.appendChild(yLabel);
+                let rowDiv = document.createElement('div'); rowDiv.className = 'board-row';
+                for (let xVal = xStart; xVal !== xEnd; xVal += xStep) {
+                    let colIdx = xVal; let square = document.createElement('div'); let isDark = (xVal + yVal) % 2 === 0; square.className = 'square ' + (isDark ? 'dark' : 'light');
+                    if (isActivityMode) {
+                        const q = examQuestions[currentQuestionIdx];
+                        if (q && q.type === 'B') { square.classList.add('clickable'); square.onclick = () => activitySquareClick(xVal, yVal); }
+                        if (q && q.type === 'A' && xVal === q.x && yVal === q.y) { let piece = document.createElement('div'); piece.className = 'piece red piece-highlight'; square.appendChild(piece); }
+                    } else {
+                        let pieceVal = boardState[rowIdx][colIdx];
+                        if (pieceVal !== 0) { let piece = document.createElement('div'); piece.className = 'piece ' + (isRed(pieceVal) ? 'red' : 'black'); if (isDama(pieceVal)) piece.innerText = '👑'; square.appendChild(piece); }
+                    }
+                    rowDiv.appendChild(square);
+                }
+                board.appendChild(rowDiv);
+            }
+        }
+        function reiniciarPartida(force = false) { if(force || confirm("Tem certeza que deseja reiniciar o jogo?")) { currentPlayer = 1; turnState = 'normal'; activePiece = null; document.getElementById('btn-jogar').disabled = false; document.getElementById('turn-display').innerHTML = `VEZ DAS <br><span style="color:#ff4757; font-size: 1.2em;">VERMELHAS</span>`; limparInputs(); mostrarMensagem("Jogo Reiniciado!", false); initBoard(); drawBoard(); } }
+        function limparInputs() { document.getElementById('orig-x').value = ''; document.getElementById('orig-y').value = ''; document.getElementById('dest-x').value = ''; document.getElementById('dest-y').value = ''; document.getElementById('orig-x').focus(); }
+        function getPathPieces(ox, oy, dx, dy) { let pieces = []; let steps = Math.abs(dx - ox); let dirX = (dx - ox) > 0 ? 1 : -1; let dirY = (dy - oy) > 0 ? 1 : -1; for (let i = 1; i < steps; i++) { let checkX = ox + (i * dirX), checkY = oy + (i * dirY); let r = 7 - checkY, c = checkX; if (boardState[r][c] !== 0) pieces.push({x: checkX, y: checkY, val: boardState[r][c], r: r, c: c}); } return pieces; }
+        function hasAvailableCaptures(startX, startY) {
+            let r = 7 - startY, c = startX, piece = boardState[r][c], pOwner = getPlayer(piece); let dirs = [[1,1], [1,-1], [-1,1], [-1,-1]];
+            for (let d of dirs) {
+                if (isDama(piece)) { let step = 1, foundEnemy = false; while(true) { let tx = startX + d[0]*step, ty = startY + d[1]*step; if (tx < 0 || tx > 7 || ty < 0 || ty > 7) break; let tPiece = boardState[7 - ty][tx]; if (tPiece !== 0) { if (getPlayer(tPiece) === pOwner) break; if (getPlayer(tPiece) !== pOwner) { if (foundEnemy) break; foundEnemy = true; } } else if (foundEnemy) return true; step++; } } 
+                else { let tx = startX + d[0]*2, ty = startY + d[1]*2; let mx = startX + d[0], my = startY + d[1]; if (tx >= 0 && tx <= 7 && ty >= 0 && ty <= 7) { if (boardState[7 - ty][tx] === 0 && boardState[7 - my][mx] !== 0 && getPlayer(boardState[7 - my][mx]) !== pOwner) return true; } }
+            } return false;
+        }
+        function checkWin() { let redCount = 0, blackCount = 0; for(let r=0; r<8; r++) { for(let c=0; c<8; c++) { if(isRed(boardState[r][c])) redCount++; if(isBlack(boardState[r][c])) blackCount++; } } if (redCount === 0) return 2; if (blackCount === 0) return 1; return 0; }
+        function fazerJogada() {
+            if(isActivityMode) return; 
+            let ox = parseInt(document.getElementById('orig-x').value), oy = parseInt(document.getElementById('orig-y').value); let dx = parseInt(document.getElementById('dest-x').value), dy = parseInt(document.getElementById('dest-y').value);
+            if (isNaN(ox) || isNaN(oy) || isNaN(dx) || isNaN(dy)) return mostrarMensagem("Preencha todas as coordenadas!"); if (ox<0 || ox>7 || oy<0 || oy>7 || dx<0 || dx>7 || dy<0 || dy>7) return mostrarMensagem("Fora do limite (Use 0 a 7)!"); if (turnState === 'multi_jump' && (ox !== activePiece.x || oy !== activePiece.y)) return mostrarMensagem(`Capture com a peça em (${activePiece.x}, ${activePiece.y})!`);
+            let oCol = ox, oRow = 7 - oy, dCol = dx, dRow = 7 - dy; let piece = boardState[oRow][oCol], pOwner = getPlayer(piece);
+            if (piece === 0) return mostrarMensagem("Casa de origem vazia!"); if (pOwner !== currentPlayer) return mostrarMensagem(`Vez das ${currentPlayer === 1 ? 'VERMELHAS' : 'PRETAS'}!`); if (boardState[dRow][dCol] !== 0) return mostrarMensagem("Casa de destino ocupada!"); if (Math.abs(dx - ox) !== Math.abs(dy - oy)) return mostrarMensagem("Movimento deve ser na diagonal!");
+            let diffX = dx - ox, diffY = dy - oy, moveu = false, capturou = false;
+            if (isDama(piece)) {
+                let pathPieces = getPathPieces(ox, oy, dx, dy);
+                if (pathPieces.length === 0) { if (turnState === 'multi_jump') return mostrarMensagem("Você é obrigado a capturar!"); boardState[dRow][dCol] = piece; boardState[oRow][oCol] = 0; moveu = true; } 
+                else if (pathPieces.length === 1) { if (getPlayer(pathPieces[0].val) === pOwner) return mostrarMensagem("Não pode capturar a própria peça!"); boardState[pathPieces[0].r][pathPieces[0].c] = 0; boardState[dRow][dCol] = piece; boardState[oRow][oCol] = 0; moveu = true; capturou = true; } 
+                else return mostrarMensagem("Movimento inválido! Muitas peças no caminho.");
+            } else {
+                let direcaoY = (pOwner === 1) ? 1 : -1; 
+                if (Math.abs(diffX) === 1 && diffY === direcaoY) { if (turnState === 'multi_jump') return mostrarMensagem("Você é obrigado a capturar!"); boardState[dRow][dCol] = piece; boardState[oRow][oCol] = 0; moveu = true; } 
+                else if (Math.abs(diffX) === 2 && Math.abs(diffY) === 2) { let meioCol = oCol + (diffX / 2), meioRow = oRow - (diffY / 2), pecaCapturada = boardState[meioRow][meioCol]; if (pecaCapturada !== 0 && getPlayer(pecaCapturada) !== pOwner) { boardState[meioRow][meioCol] = 0; boardState[dRow][dCol] = piece; boardState[oRow][oCol] = 0; moveu = true; capturou = true; } else return mostrarMensagem("Captura inválida!"); } 
+                else return mostrarMensagem("Movimento não permitido!");
+            }
+            if (moveu) {
+                let promoted = false;
+                if (!isDama(piece)) { if (pOwner === 1 && dy === 7) { boardState[dRow][dCol] = 3; promoted = true; } if (pOwner === 2 && dy === 0) { boardState[dRow][dCol] = 4; promoted = true; } }
+                let winner = checkWin();
+                if (winner !== 0) { drawBoard(); let winColor = winner === 1 ? 'VERMELHAS' : 'PRETAS'; document.getElementById('turn-display').innerHTML = `🏆 VITÓRIA DAS <br><span style="color:${winner===1?'#ff4757':'#2f3542'};">${winColor}</span> 🏆`; document.getElementById('btn-jogar').disabled = true; mostrarMensagem(`FIM DE JOGO! As ${winColor} venceram!`, false, true); return; }
+                if (capturou && !promoted && hasAvailableCaptures(dx, dy)) { turnState = 'multi_jump'; activePiece = {x: dx, y: dy}; mostrarMensagem(`Continue capturando com a peça em (${dx}, ${dy})!`, false, true); document.getElementById('orig-x').value = dx; document.getElementById('orig-y').value = dy; document.getElementById('dest-x').value = ''; document.getElementById('dest-y').value = ''; document.getElementById('dest-x').focus(); drawBoard(); } 
+                else { turnState = 'normal'; activePiece = null; mostrarMensagem("JOGADA FEITA!", false); limparInputs(); drawBoard(); const btnJogar = document.getElementById('btn-jogar'); btnJogar.disabled = true; setTimeout(() => { currentPlayer = currentPlayer === 1 ? 2 : 1; let turnText = currentPlayer === 1 ? '<span style="color:#ff4757; font-size: 1.2em;">VERMELHAS</span>' : '<span style="color:#2f3542; font-size: 1.2em;">PRETAS</span>'; document.getElementById('turn-display').innerHTML = `VEZ DAS <br>${turnText}`; drawBoard(); btnJogar.disabled = false; }, 1500); }
+            }
+        }
+        initBoard(); drawBoard();
+    </script>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // A CHAVE COMPLETA E CORRIGIDA:
         const firebaseConfig = {
             apiKey: "AIzaSyDKS7qoxoM3z67ScthfO-jKsn4Knq33xb4",
             authDomain: "damas-no-plano.firebaseapp.com",
@@ -29,51 +323,40 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
 
-        document.getElementById('btn-entrar').onclick = async () => {
-            const painel = document.getElementById('resultado');
-            painel.innerText = "Pensando...";
-            
-            try {
-                const credencial = await signInWithPopup(auth, new GoogleAuthProvider());
-                const emailLogado = credencial.user.email.toLowerCase();
-                
-                let log = `✅ 1. Login com o Google funcionou.\n`;
-                log += `📧 O Google diz que o e-mail que logou é: [${emailLogado}]\n\n`;
-                
-                log += `⏳ 2. Indo no Firebase procurar a pasta 'usuarios'...\n`;
-                painel.innerText = log;
+        const btnEntrar = document.getElementById('btn-entrar');
+        const telaLogin = document.getElementById('tela-login');
+        const msgErro = document.getElementById('mensagem-erro');
+        const conteudoJogo = document.getElementById('conteudo-do-jogo');
 
-                const pastaUsuarios = await getDocs(collection(db, "usuarios"));
-                
-                if (pastaUsuarios.empty) {
-                    log += `❌ ERRO BIZARRO: O código achou a pasta 'usuarios' VAZIA ou não achou a pasta!\n`;
-                    log += `(Confira se a coleção no Firebase não foi criada com um espaço invisível no nome, ex: 'usuarios ')`;
-                } else {
-                    log += `📂 3. Sucesso! Encontrei estes e-mails dentro do seu banco de dados:\n`;
-                    let achou = false;
-                    
-                    pastaUsuarios.forEach((documento) => {
-                        const emailNoBanco = documento.id;
-                        log += `   -> [${emailNoBanco}]\n`;
-                        if (emailNoBanco === emailLogado) {
-                            achou = true;
-                        }
-                    });
-                    
-                    log += `\n`;
-                    if (achou) {
-                        log += `🎉 CONCLUSÃO: Tudo perfeito! O e-mail do Google bateu idêntico com o do banco. Se não estava abrindo antes, era só o cache (memória velha) do iPad atrapalhando.`;
-                    } else {
-                        log += `🚨 CONCLUSÃO: Os nomes NÃO BATEM. Veja os colchetes [ ] lá no passo 1 e no passo 3. Tem alguma letra ou espaço de diferença entre eles.`;
-                    }
-                }
-                painel.innerText = log;
-
-            } catch (erro) {
-                painel.innerText = "⚠️ ERRO NO SISTEMA: " + erro.message;
-            }
+        btnEntrar.onclick = () => {
+            msgErro.style.display = 'none';
+            signInWithPopup(auth, provider).catch(error => {
+                console.error("Erro ao abrir a janela do Google", error);
+            });
         };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const docRef = doc(db, "usuarios", user.email.toLowerCase());
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        // DEU CERTO! Esconde a porta e mostra o jogo.
+                        telaLogin.style.display = 'none';
+                        conteudoJogo.style.display = 'flex'; 
+                    } else {
+                        // BARRADO!
+                        msgErro.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error("Erro no Banco de Dados: ", error);
+                }
+            }
+        });
     </script>
+
 </body>
 </html>
